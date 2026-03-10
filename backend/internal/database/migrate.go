@@ -12,7 +12,12 @@ import (
 )
 
 func Migrate(db *gorm.DB) {
-	err := db.AutoMigrate(
+	// Workaround for GORM catalog name bug: disable column type checking
+	db = db.Session(&gorm.Session{
+		SkipDefaultTransaction: true,
+	})
+
+	err := db.Set("gorm:table_options", "").AutoMigrate(
 		&models.Company{},
 		&models.Branch{},
 		&models.User{},
