@@ -52,6 +52,18 @@ type ProfitLossRow struct {
 	Balance float64 `json:"balance"`
 }
 
+type CashFlowSection struct {
+	Title    string        `json:"title"`
+	Accounts []CashFlowRow `json:"accounts"`
+	Total    float64       `json:"total"`
+}
+
+type CashFlowRow struct {
+	Code   string  `json:"code"`
+	Name   string  `json:"name"`
+	Amount float64 `json:"amount"`
+}
+
 func (h *ReportHandler) TrialBalance(c *fiber.Ctx) error {
 	companyID := c.Locals("company_id").(uuid.UUID)
 	fyID := c.Query("financial_year_id")
@@ -215,6 +227,90 @@ type GeneralLedgerEntry struct {
 	RunningBalance float64 `json:"running_balance"`
 }
 
+func (h *ReportHandler) CashFlow(c *fiber.Ctx) error {
+	companyID := c.Locals("company_id").(uuid.UUID)
+	fyID := c.Query("financial_year_id")
+
+	// Get all bank/cash accounts (code starting with 1100)
+	var cashAccounts []accModels.Account
+	query := h.db.Where("company_id = ? AND is_active = ? AND code LIKE ?", companyID, true, "1100%").Order("code ASC")
+	query.Find(&cashAccounts)
+
+	// Calculate cash flows from operations, investing, and financing
+	operating := CashFlowSection{Title: "Operating Activities"}
+	investing := CashFlowSection{Title: "Investing Activities"}
+	financing := CashFlowSection{Title: "Financing Activities"}
+
+	// For each cash account, get all journal entries
+	for _, acc := range cashAccounts {
+		var entries []struct {
+			DebitAmount  float64
+			CreditAmount float64
+			AccountCode  string
+			AccountName  string
+		}
+
+		entryQuery := h.db.Table("journal_entries je").
+			Select("je.debit_amount, je.credit_amount, a.code as account_code, a.name as account_name").
+			Joins("JOIN journals j ON j.id = je.journal_id").
+			Joins("JOIN accounts a ON a.id = je.account_id").
+			Where("je.account_id = ? AND j.company_id = ? AND j.status = ?",
+				acc.ID, companyID, accModels.JournalStatusPosted)
+
+		if fyID != "" {
+			entryQuery = entryQuery.Where("j.financial_year_id = ?", fyID)
+		}
+
+		entryQuery.Scan(&entries)
+
+		for _, e := range entries {
+			netFlow := e.DebitAmount - e.CreditAmount
+			if netFlow == 0 {
+				continue
+			}
+
+			row := CashFlowRow{
+				Code:   e.AccountCode,
+				Name:   e.AccountName,
+				Amount: netFlow,
+			}
+
+			// Classify based on account code
+			if e.AccountCode[:2] == "40" || e.AccountCode[:2] == "50" || e.AccountCode[:2] == "12" || e.AccountCode[:2] == "21" {
+				// Revenue, Expenses, AR, AP = Operating
+				operating.Accounts = append(operating.Accounts, row)
+				operating.Total += netFlow
+			} else if e.AccountCode[:2] == "13" || e.AccountCode[:2] == "14" || e.AccountCode[:2] == "15" {
+				// Fixed assets, investments = Investing
+				investing.Accounts = append(investing.Accounts, row)
+				investing.Total += netFlow
+			} else {
+				// Loans, equity = Financing
+				financing.Accounts = append(financing.Accounts, row)
+				financing.Total += netFlow
+			}
+		}
+	}
+
+	// Calculate opening and closing cash
+	var openingCash, closingCash float64
+	for _, acc := range cashAccounts {
+		openingCash += acc.OpeningBalance
+		closingCash += acc.CurrentBalance
+	}
+
+	netChange := operating.Total + investing.Total + financing.Total
+
+	return utils.SuccessResponse(c, fiber.Map{
+		"operating":    operating,
+		"investing":    investing,
+		"financing":    financing,
+		"opening_cash": openingCash,
+		"closing_cash": closingCash,
+		"net_change":   netChange,
+	})
+}
+
 func (h *ReportHandler) GeneralLedger(c *fiber.Ctx) error {
 	companyID := c.Locals("company_id").(uuid.UUID)
 	accountID := c.Query("account_id")
@@ -326,4 +422,5 @@ func (h *ReportHandler) RegisterRoutes(api fiber.Router) {
 	reports.Get("/balance-sheet", h.BalanceSheet)
 	reports.Get("/profit-loss", h.ProfitAndLoss)
 	reports.Get("/general-ledger", h.GeneralLedger)
+	reports.Get("/cash-flow", h.CashFlow)
 }
