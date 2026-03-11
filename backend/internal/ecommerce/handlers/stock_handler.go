@@ -123,6 +123,7 @@ func (h *StockHandler) RegisterRoutes(api fiber.Router) {
 }
 
 // RecordStockMovement is a helper for other handlers to record stock changes
+// Note: This function expects to be called within an existing transaction (db should be *gorm.DB from tx.Begin())
 func RecordStockMovement(db *gorm.DB, companyID, productID uuid.UUID, quantity int, movType, refType, refID, notes string) error {
 	movement := ecomModels.StockMovement{
 		CompanyID:     companyID,
@@ -134,16 +135,12 @@ func RecordStockMovement(db *gorm.DB, companyID, productID uuid.UUID, quantity i
 		Notes:         notes,
 	}
 
-	tx := db.Begin()
-
-	if err := tx.Create(&movement).Error; err != nil {
-		tx.Rollback()
+	if err := db.Create(&movement).Error; err != nil {
 		return err
 	}
 
 	var product ecomModels.Product
-	if err := tx.Where("id = ?", productID).First(&product).Error; err != nil {
-		tx.Rollback()
+	if err := db.Where("id = ?", productID).First(&product).Error; err != nil {
 		return err
 	}
 
@@ -152,11 +149,9 @@ func RecordStockMovement(db *gorm.DB, companyID, productID uuid.UUID, quantity i
 		newQty = 0
 	}
 
-	if err := tx.Model(&product).Update("stock_quantity", newQty).Error; err != nil {
-		tx.Rollback()
+	if err := db.Model(&product).Update("stock_quantity", newQty).Error; err != nil {
 		return err
 	}
 
-	tx.Commit()
 	return nil
 }
