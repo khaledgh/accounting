@@ -7,16 +7,17 @@ import { useAuthStore } from '@/store/authStore'
 import { useFavoritesStore } from '@/store/favoritesStore'
 import type { Product } from '@/types'
 import { formatCurrency, getImageUrl } from '@/lib/utils'
+import { useUIStore } from '@/store/uiStore'
 
 interface ProductCardProps {
   product: Product
-  onAuthRequired?: () => void
 }
 
-export default function ProductCard({ product, onAuthRequired }: ProductCardProps) {
+export default function ProductCard({ product }: ProductCardProps) {
   const { addItem } = useCartStore()
   const { isAuthenticated } = useAuthStore()
   const { isFavorited, toggleFavorite } = useFavoritesStore()
+  const { openLoginModal } = useUIStore()
   const identifier = product.slug || product.id
   const favorited = isFavorited(product.id)
 
@@ -24,7 +25,7 @@ export default function ProductCard({ product, onAuthRequired }: ProductCardProp
     e.preventDefault()
     e.stopPropagation()
     if (!isAuthenticated) {
-      onAuthRequired?.()
+      openLoginModal()
       return
     }
     try {
@@ -39,7 +40,7 @@ export default function ProductCard({ product, onAuthRequired }: ProductCardProp
     e.preventDefault()
     e.stopPropagation()
     if (!isAuthenticated) {
-      onAuthRequired?.()
+      openLoginModal()
       return
     }
     try {

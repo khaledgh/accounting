@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/authStore'
 import { useFavoritesStore } from '@/store/favoritesStore'
 import type { Product } from '@/types'
 import { formatCurrency, getImageUrl } from '@/lib/utils'
+import { useUIStore } from '@/store/uiStore'
 
 export default function ProductDetailPage() {
   const { slug } = useParams()
@@ -20,10 +21,12 @@ export default function ProductDetailPage() {
   const { addItem } = useCartStore()
   const { isAuthenticated } = useAuthStore()
   const { isFavorited, toggleFavorite } = useFavoritesStore()
+  const { openLoginModal } = useUIStore()
   const favorited = product ? isFavorited(product.id) : false
 
   const handleToggleFavorite = async () => {
-    if (!product || !isAuthenticated) return
+    if (!product) return
+    if (!isAuthenticated) { openLoginModal(); return }
     try {
       const nowFav = await toggleFavorite(product.id)
       toast.success(nowFav ? 'Added to favorites' : 'Removed from favorites')
@@ -45,7 +48,8 @@ export default function ProductDetailPage() {
   }, [slug])
 
   const handleAddToCart = async () => {
-    if (!product || !isAuthenticated) return
+    if (!product) return
+    if (!isAuthenticated) { openLoginModal(); return }
     setAdding(true)
     try {
       await addItem(product.id, quantity)

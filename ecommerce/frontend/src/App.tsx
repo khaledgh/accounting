@@ -14,6 +14,7 @@ import ProfilePage from '@/pages/ProfilePage'
 import FavoritesPage from '@/pages/FavoritesPage'
 import CheckoutPage from '@/pages/CheckoutPage'
 import { useAuthStore } from '@/store/authStore'
+import LoginModal from '@/components/auth/LoginModal'
 import { useFavoritesStore } from '@/store/favoritesStore'
 
 const pageTransition = {
@@ -56,6 +57,7 @@ export default function App() {
         </AnimatePresence>
       </main>
       <Footer />
+      <LoginModal />
     </div>
   )
 }
