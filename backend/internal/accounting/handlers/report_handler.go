@@ -53,15 +53,14 @@ type ProfitLossRow struct {
 }
 
 type CashFlowSection struct {
-	Title    string        `json:"title"`
-	Accounts []CashFlowRow `json:"accounts"`
-	Total    float64       `json:"total"`
+	Title string        `json:"title"`
+	Items []CashFlowRow `json:"items"`
+	Total float64       `json:"total"`
 }
 
 type CashFlowRow struct {
-	Code   string  `json:"code"`
-	Name   string  `json:"name"`
-	Amount float64 `json:"amount"`
+	Description string  `json:"description"`
+	Amount      float64 `json:"amount"`
 }
 
 func (h *ReportHandler) TrialBalance(c *fiber.Ctx) error {
@@ -270,23 +269,22 @@ func (h *ReportHandler) CashFlow(c *fiber.Ctx) error {
 			}
 
 			row := CashFlowRow{
-				Code:   e.AccountCode,
-				Name:   e.AccountName,
-				Amount: netFlow,
+				Description: e.AccountName,
+				Amount:      netFlow,
 			}
 
 			// Classify based on account code
 			if e.AccountCode[:2] == "40" || e.AccountCode[:2] == "50" || e.AccountCode[:2] == "12" || e.AccountCode[:2] == "21" {
 				// Revenue, Expenses, AR, AP = Operating
-				operating.Accounts = append(operating.Accounts, row)
+				operating.Items = append(operating.Items, row)
 				operating.Total += netFlow
 			} else if e.AccountCode[:2] == "13" || e.AccountCode[:2] == "14" || e.AccountCode[:2] == "15" {
 				// Fixed assets, investments = Investing
-				investing.Accounts = append(investing.Accounts, row)
+				investing.Items = append(investing.Items, row)
 				investing.Total += netFlow
 			} else {
 				// Loans, equity = Financing
-				financing.Accounts = append(financing.Accounts, row)
+				financing.Items = append(financing.Items, row)
 				financing.Total += netFlow
 			}
 		}
