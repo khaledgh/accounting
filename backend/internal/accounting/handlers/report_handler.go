@@ -236,9 +236,9 @@ func (h *ReportHandler) CashFlow(c *fiber.Ctx) error {
 	query.Find(&cashAccounts)
 
 	// Calculate cash flows from operations, investing, and financing
-	operating := CashFlowSection{Title: "Operating Activities"}
-	investing := CashFlowSection{Title: "Investing Activities"}
-	financing := CashFlowSection{Title: "Financing Activities"}
+	operating := CashFlowSection{Title: "Operating Activities", Items: []CashFlowRow{}}
+	investing := CashFlowSection{Title: "Investing Activities", Items: []CashFlowRow{}}
+	financing := CashFlowSection{Title: "Financing Activities", Items: []CashFlowRow{}}
 
 	// For each cash account, get all journal entries
 	for _, acc := range cashAccounts {

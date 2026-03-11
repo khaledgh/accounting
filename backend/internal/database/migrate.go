@@ -27,7 +27,7 @@ func Migrate(db *gorm.DB) {
 		&models.UserRole{},
 		&models.AuditLog{},
 		&models.AutoNumberSequence{},
-		&models.Setting{},
+		// &models.Setting{}, // Temporarily disabled due to constraint migration issue
 		&models.InvoiceTemplate{},
 		&models.Media{},
 		// Accounting

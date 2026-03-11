@@ -24,7 +24,7 @@ type Setting struct {
 	BaseModel
 	CompanyID uuid.UUID `json:"company_id" gorm:"type:uuid;not null;index"`
 	Company   *Company  `json:"company,omitempty" gorm:"foreignKey:CompanyID"`
-	Key       string    `json:"key" gorm:"not null;size:200;uniqueIndex:idx_setting_key"`
+	Key       string    `json:"key" gorm:"not null;size:200"`
 	Value     string    `json:"value" gorm:"type:text"`
 	Group     string    `json:"group" gorm:"size:100;index"`
 }

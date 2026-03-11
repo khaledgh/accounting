@@ -23,7 +23,7 @@ func main() {
 
 	db := database.Connect(&cfg.DB)
 	database.ConnectRedis(&cfg.Redis)
-	database.Migrate(db)
+	// database.Migrate(db) // Temporarily disabled due to GORM constraint naming issues
 
 	// Run seed if --seed flag is passed
 	for _, arg := range os.Args[1:] {
